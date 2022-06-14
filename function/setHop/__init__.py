@@ -3,7 +3,7 @@ import logging
 
 import azure.functions as func
 
-from HourOfPower.power_savings import get_days_usage, find_peak_hop, set_hop, notify_hass
+from power_savings import get_days_usage, find_peak_hop, set_hop, notify_hass
 
 def main(mytimer: func.TimerRequest) -> None:
     
