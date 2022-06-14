@@ -6,7 +6,7 @@ import arrow
 from hashlib import md5
 from decimal import Decimal
 
-from cryptoJS import encrypt
+from .cryptoJS import encrypt
 
 class Hour(object):
     def __init__(self, interval, start, end, hop_allow=0):
@@ -184,7 +184,7 @@ def hop_score():
     hop_savings = Decimal('0.0')
 
     print("")
-    consumption = ek.consumption(arrow.now().shift(days=-2).shift(months=-1), arrow.now())
+    consumption = ek.consumption(arrow.now().shift(days=-3), arrow.now())
     for date in consumption:
         data = consumption[date]
 
