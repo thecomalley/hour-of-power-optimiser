@@ -1,6 +1,10 @@
 import json
+import logging
+
 from requests import get, post
 import os
+from decimal import Decimal
+import arrow
 
 import pandas as pd
 
@@ -193,3 +197,64 @@ def notify_hass(state, attributes):
 
     response = post(url, data=json.dumps(payload), headers=headers)
     print(response.text)
+
+def get_last_days_usage() -> None:
+    # Get environment variables
+    ek_email = os.environ["EK_EMAIL"]
+    ek_password = os.environ["EK_PASSWORD"]
+
+    ek = ElectricKiwi()
+    token = ek.at_token()
+
+    customer = ek.login(ek_email, ek.password_hash(ek_password))
+
+    connection  = ek.connection_details()
+
+    kwh_cost    = Decimal(connection['pricing_plan']['usage_rate_inc_gst'])
+    wrong_kwh   = Decimal('0.0')
+    hop_savings = Decimal('0.0')
+
+    print("")
+    consumption = ek.consumption(arrow.now().shift(days=-2), arrow.now())
+    for date in consumption:
+        data = consumption[date]
+
+        hop_usage = Decimal(data['consumption_adjustment'])
+        hop_savings += hop_usage
+        hop_best_hour = []
+
+        for interval in range(1, 24*2):
+            interval_data = data['intervals'][str(interval)]
+            if interval_data['hop_best']:
+                hop_best = Decimal(interval_data['consumption']) + Decimal(data['intervals'][str(interval+1)]['consumption'])
+                hop_best_hour.append(interval_data['time'])
+                break
+
+        date = arrow.get(date, 'YYYY-MM-DD').format('DD/MM/YYYY')
+
+        diff = hop_best - hop_usage
+
+        yesterday = {
+            "date": date,
+            "usage_best": str(hop_best),
+            "hour_best": hop_best_hour[0],
+            "usage_actual": str(hop_usage),
+            "hour_actual": "??",
+            "savings_actual": "${:.2f}".format(hop_savings * kwh_cost),
+            "savings_best": "${:.2f}".format(hop_savings * kwh_cost)
+        }
+
+        return yesterday
+
+        if diff > 0.01:
+            wrong_kwh += diff
+            hop_savings * kwh_cost
+            return f"{date}: Wrong HOP: {hop_usage} @ ?? vs {hop_best} @ {hop_best_hour} - ${hop_savings * kwh_cost}" 
+            logging.info('{} - Wrong HOP: {}kWh ({}) vs {}kWh ({}kWh)'.format(date, hop_best, hop_best_hour, hop_usage, diff))
+        else:
+            return f"{date}: Correct HOP: {hop_best} @ {hop_best_hour}" 
+            logging.info('{} - Correct HOP: {}kWh'.format(date, hop_usage))
+
+    logging.info('\nHOP Savings: {}kWh (${:.2f})'.format(hop_savings, hop_savings * kwh_cost))
+    logging.info('Missed HOP: {}kWh (${:.2f})'.format(wrong_kwh, wrong_kwh * kwh_cost))
+    logging.info('HOP Score: {:.2f}%'.format(Decimal(100.0) - ((wrong_kwh / hop_savings) * 100)))
