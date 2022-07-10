@@ -80,6 +80,7 @@ resource "azurerm_linux_function_app" "main" {
   app_settings = {
     ENABLE_ORYX_BUILD              = true # Required to enable remote build on Linux
     SCM_DO_BUILD_DURING_DEPLOYMENT = true # Required to enable remote build on Linux
+    DISCORD_WEBHOOK_URL            = "@Microsoft.KeyVault(VaultName=${azurerm_key_vault.main.name};SecretName=discord-webhook-url)"
     HASS_URL                       = "@Microsoft.KeyVault(VaultName=${azurerm_key_vault.main.name};SecretName=hass-url)"
     HASS_ACCESS_TOKEN              = "@Microsoft.KeyVault(VaultName=${azurerm_key_vault.main.name};SecretName=hass-access-token)"
     EK_EMAIL                       = "@Microsoft.KeyVault(VaultName=${azurerm_key_vault.main.name};SecretName=ek-email)"
