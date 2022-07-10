@@ -5,4 +5,4 @@ pyaes
 requests
 arrow
 pandas
-discord_webhook
+discord-webhook

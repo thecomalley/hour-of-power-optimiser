@@ -3,15 +3,13 @@ import os
 from discord_webhook import DiscordWebhook, DiscordEmbed
 
 
-def notfiy_discord(yesterday, peak_hop, kwh):
+def notify_discord(yesterday, peak_hop, kwh):
     discord_webhook_url = os.environ["DISCORD_WEBHOOK_URL"]
 
     webhook = DiscordWebhook(url=discord_webhook_url, username="az-hop")
 
-    embed = DiscordEmbed(title=f'Hour of Power set: {kwh}kwh @ {peak_hop}', color='03b2f8')
+    embed = DiscordEmbed(title=f'Hour of Power set: {peak_hop} - {kwh}kwh', color='03b2f8')
     embed.set_timestamp()
-    embed.add_embed_field(name='Time', value=peak_hop, inline=False)
-
     embed.add_embed_field(name='Previous', value=yesterday['date'])
     embed.add_embed_field(name='usage_best', value=yesterday['usage_best'])
     embed.add_embed_field(name='hour_best', value=yesterday['hour_best'])
