@@ -187,7 +187,7 @@ def find_optimal_hop(usage):
                 pd.Timedelta(minutes=60)).strftime("%I:%M %p")
 
     # dump to csv for debugging
-    df.to_csv('find_optimal_hop.csv')
+    # df.to_csv('find_optimal_hop.csv')
 
     logging.info(f"Optimal time period: {start_time} - {end_time}")
     logging.info(f"Total kWh: {total_kwh}")
