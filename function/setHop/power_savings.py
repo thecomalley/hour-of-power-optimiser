@@ -171,23 +171,31 @@ def find_optimal_hop(usage):
     optimal_hour = cost_by_hour.idxmax()
     optimal_half_hour = cost_by_half_hour.idxmax()
 
+    # If the highest cost is in the 1-hour interval, use that
     if cost_by_hour[optimal_hour] > cost_by_half_hour[optimal_half_hour]:
         optimal_time_period = optimal_hour
         total_kwh = df[df.index.hour == optimal_hour.hour]['state'].sum()
     else:
+        # If the highest cost is in the 30-minute interval, use that
         optimal_time_period = optimal_half_hour
         total_kwh = df[(df.index.hour == optimal_half_hour.hour) &
                        (df.index.minute == optimal_half_hour.minute)]['state'].sum()
 
-    cost = df[(df.index.hour == optimal_time_period.hour) &
-              (df.index.minute == optimal_time_period.minute)]['cost'].sum()
-
+    # Convert optimal_time_period to 12-hour format for logging & notifications
     start_time = optimal_time_period.strftime("%I:%M %p")
     end_time = (optimal_time_period +
                 pd.Timedelta(minutes=60)).strftime("%I:%M %p")
 
     # dump to csv for debugging
     # df.to_csv('find_optimal_hop.csv')
+
+    # To calculate cost we need to know what rate we are on
+    if optimal_time_period.hour >= 9 and optimal_time_period.hour < 17:  # Off Peak Shoulder
+        cost = total_kwh * rates['off_peak_shoulder']
+    elif optimal_time_period.hour >= 21 and optimal_time_period.hour < 23:  # Off Peak Shoulder
+        cost = total_kwh * rates['off_peak_shoulder']
+    elif optimal_time_period.hour >= 23 or optimal_time_period.hour < 7:  # Off Peak
+        cost = total_kwh * rates['off_peak']
 
     logging.info(f"Optimal time period: {start_time} - {end_time}")
     logging.info(f"Total kWh: {total_kwh}")
