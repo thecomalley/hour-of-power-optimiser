@@ -11,21 +11,23 @@ from libs.electrickiwi import ElectricKiwi
 
 app = func.FunctionApp()
 
+
 @app.function_name(name="HourOfPower")
-@app.timer_trigger(schedule="0 55 23 * * *", 
-              arg_name="mytimer",
-              run_on_startup=True)
+@app.timer_trigger(schedule="0 55 23 * * *",
+                   arg_name="mytimer",
+                   run_on_startup=True)
 def hour_of_power(mytimer: func.TimerRequest) -> None:
     try:
         usage_data = get_usage_data(
-            url=os.environ["HOME_ASSISTANT_URL"], 
-            token=os.environ["HOME_ASSISTANT_ACCESS_TOKEN"], 
+            url=os.environ["HOME_ASSISTANT_URL"],
+            token=os.environ["HOME_ASSISTANT_ACCESS_TOKEN"],
             entity_id=os.environ["HOME_ASSISTANT_ENTITY_ID"]
         )
 
         # clean the data
-        usage_data.pop(0) # remove the first element as its just metadata
-        usage_data = [obj for obj in usage_data if obj["state"] != "unavailable"] # remove any unavailable states
+        usage_data.pop(0)  # remove the first element as its just metadata
+        usage_data = [obj for obj in usage_data if obj["state"]
+                      != "unavailable"]  # remove any unavailable states
 
         start_time, end_time, total_kwh, cost = find_optimal_hop(usage_data)
 
@@ -45,10 +47,11 @@ def hour_of_power(mytimer: func.TimerRequest) -> None:
         token = ek.at_token()
         ek.login(
             email=os.environ["ELECTRIC_KIWI_EMAIL"],
-            password_hash=ek.password_hash(os.environ["ELECTRIC_KIWI_PASSWORD"])
+            password_hash=ek.password_hash(
+                os.environ["ELECTRIC_KIWI_PASSWORD"])
         )
         ek.set_hop_hour(ek_hours.index(start_time)+1)
-        
+
     except Exception as e:
         logging.error(e)
         send_pushover_notification(
@@ -57,7 +60,6 @@ def hour_of_power(mytimer: func.TimerRequest) -> None:
             message=f"An error occurred: {e}",
             title="Hour of Power Optimiser - Error"
         )
-        return func.HttpResponse(status_code=500, body="An error occurred")
 
     else:
         send_pushover_notification(
@@ -66,4 +68,3 @@ def hour_of_power(mytimer: func.TimerRequest) -> None:
             message=f"Hour of Power: {start_time} - {end_time}\nTotal kWh: {total_kwh} kWh\nEstimated Savings: ${cost}",
             title="Hour of Power Optimiser"
         )
-        return func.HttpResponse(status_code=200, body="Hello World")
