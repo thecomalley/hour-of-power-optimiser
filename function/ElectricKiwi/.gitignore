@@ -1,6 +1,0 @@
-__pycache__/
-*.pyc
-*.pyo
-build/
-electrickiwi.spec
-ek_creds.txt
