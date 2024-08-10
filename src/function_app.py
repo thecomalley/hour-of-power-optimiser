@@ -15,7 +15,7 @@ app = func.FunctionApp()
 @app.function_name(name="HourOfPower")
 @app.timer_trigger(schedule="0 55 23 * * *",
                    arg_name="mytimer",
-                   run_on_startup=True)
+                   run_on_startup=False)
 def hour_of_power(mytimer: func.TimerRequest) -> None:
     try:
         usage_data = get_usage_data(
