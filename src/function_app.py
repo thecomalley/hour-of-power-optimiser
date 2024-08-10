@@ -44,7 +44,7 @@ def hour_of_power(mytimer: func.TimerRequest) -> None:
         ]
 
         ek = ElectricKiwi()
-        token = ek.at_token()
+        ek.at_token()
         ek.login(
             email=os.environ["ELECTRIC_KIWI_EMAIL"],
             password_hash=ek.password_hash(
@@ -60,11 +60,12 @@ def hour_of_power(mytimer: func.TimerRequest) -> None:
             message=f"An error occurred: {e}",
             title="Hour of Power Optimiser - Error"
         )
+        raise e
 
     else:
         send_pushover_notification(
             user_key=os.environ["PUSHOVER_USER_KEY"],
             api_token=os.environ["PUSHOVER_API_TOKEN"],
-            message=f"Hour of Power: {start_time} - {end_time}\nTotal kWh: {total_kwh} kWh\nEstimated Savings: ${cost}",
+            message=f"HOP Time: {start_time} - {end_time}\nHOP Usage: {total_kwh} kWh\nEstimated Savings: ${cost}",
             title="Hour of Power Optimiser"
         )
