@@ -3,3 +3,4 @@ requests
 pandas
 arrow
 pyaes
+matplotlib

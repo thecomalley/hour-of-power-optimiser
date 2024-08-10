@@ -1,11 +1,8 @@
 import logging
 import os
-import json
-
 import azure.functions as func
-
 from libs.home_assistant import get_usage_data
-from libs.data import calculate_peak_usage
+from libs.data import calculate_optimal_hop, plot_intervals
 from libs.pushover import send_pushover_notification
 from libs.electrickiwi import ElectricKiwi
 
@@ -30,8 +27,11 @@ def hour_of_power(mytimer: func.TimerRequest) -> None:
                       != "unavailable"]  # remove any unavailable states
 
         # start_time, end_time, total_kwh, cost = find_optimal_hop(usage_data)
-        start_time, end_time, max_usage_value = calculate_peak_usage(
+        start_time, end_time, usage_cost, usage_kwh, intervals = calculate_optimal_hop(
             usage_data)
+
+        if os.getenv("AZURE_FUNCTIONS_ENVIRONMENT") == 'Development':
+            plot_intervals(intervals)
 
         # Generate a list of all possible HOPs using list comprehension
         ek_hours = [
@@ -56,19 +56,18 @@ def hour_of_power(mytimer: func.TimerRequest) -> None:
 
     except Exception as e:
         logging.error(e)
-        if os.getenv("AZURE_FUNCTIONS_ENVIRONMENT") != 'Development':
-            send_pushover_notification(
-                user_key=os.environ["PUSHOVER_USER_KEY"],
-                api_token=os.environ["PUSHOVER_API_TOKEN"],
-                message=f"An error occurred: {e}",
-                title="Hour of Power Optimiser - Error"
-            )
+        send_pushover_notification(
+            user_key=os.environ["PUSHOVER_USER_KEY"],
+            api_token=os.environ["PUSHOVER_API_TOKEN"],
+            message=f"An error occurred: {e}",
+            title="Hour of Power Optimiser - Error"
+        )
         raise e
 
     else:
         send_pushover_notification(
             user_key=os.environ["PUSHOVER_USER_KEY"],
             api_token=os.environ["PUSHOVER_API_TOKEN"],
-            message=f"HOP Time: {start_time} - {end_time}\nHOP Usage: {max_usage_value} kWh",
+            message=f"HOP Time: {start_time} - {end_time}\nHOP Usage: {usage_kwh} kWh\nEstimated Savings: ${usage_cost}",
             title="Hour of Power Optimiser"
         )
