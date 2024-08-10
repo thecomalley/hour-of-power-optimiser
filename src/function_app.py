@@ -10,7 +10,7 @@ app = func.FunctionApp()
 
 
 @app.function_name(name="HourOfPower")
-@app.timer_trigger(schedule="0 55 23 * * *",
+@app.timer_trigger(schedule="0 55 11 * * *",  # UTC Time (11:55pm NZST)
                    arg_name="mytimer",
                    run_on_startup=False)
 def hour_of_power(mytimer: func.TimerRequest) -> None:
