@@ -1,91 +1,87 @@
 import pandas as pd
 import logging
+from datetime import datetime, timedelta
+import pytz
 
 
-def find_optimal_hop(usage):
-    """
-    This function returns the optimal hop time and the kWh used.
-    """
-    # Define rates
-    rates = {
-        'off_peak_shoulder': 0.1852,
-        'off_peak': 0.1323
-    }
+def calculate_peak_usage(data):
+    # Define the UTC and NZDT timezones
+    nzdt = pytz.timezone('Pacific/Auckland')
 
-    # Load data into pandas dataframe
-    df = pd.DataFrame(usage)
+    # Define peak hours that cannot be set as 'hour of free power'
+    peak_hours = [
+        '06:30 AM', '07:00 AM', '07:30 AM', '08:00 AM', '08:30 AM',
+        '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM',
+        '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM', '11:30 PM'
+    ]
+    peak_hours = [datetime.strptime(hour, "%I:%M %p").time()
+                  for hour in peak_hours]
 
-    # Process timestamps
-    df["timestamp"] = pd.to_datetime(
-        df["last_changed"]).dt.tz_convert(tz="Pacific/Auckland")
-    df["strftime"] = df["timestamp"].dt.strftime("%I:%M %p")
+    # Convert data into a DataFrame
+    df = pd.DataFrame(data)
 
-    # Set state to numeric and calculate state difference
-    df["state"] = pd.to_numeric(df["state"]).diff()
+    # Convert timestamps to datetime objects and state to floats
+    df['last_changed'] = pd.to_datetime(
+        df['last_changed'], utc=True)  # Set as UTC
+    df['state'] = df['state'].astype(float)
 
-    # Resample data into 30-minute intervals
-    df = df.set_index('timestamp').resample('30min', origin='start_day').sum()
+    # Convert all timestamps from UTC to NZDT
+    df['last_changed'] = df['last_changed'].dt.tz_convert(nzdt)
 
-    # Define time periods
-    time_periods = [
-        ((7, 9), 'peak'),
-        ((17, 21), 'peak'),
-        ((9, 17), 'off_peak_shoulder'),
-        ((21, 23), 'off_peak_shoulder'),
-        ((23, 7), 'off_peak')
+    # Calculate power usage over 60-minute intervals starting at 30-minute marks
+    def calculate_60min_intervals(df):
+        intervals = []
+        # Generate 60-minute intervals starting at 30-minute marks
+        start_time = df['last_changed'].min().floor('h') + \
+            timedelta(minutes=30)
+        end_time = df['last_changed'].max().ceil('h')
+
+        current_time = start_time
+        while current_time <= end_time - timedelta(hours=1):
+            next_time = current_time + timedelta(hours=1)
+            interval_data = df[(df['last_changed'] >= current_time) & (
+                df['last_changed'] < next_time)]
+            if not interval_data.empty:
+                power_used = interval_data['state'].max(
+                ) - interval_data['state'].min()
+                intervals.append((current_time, next_time, power_used))
+            current_time += timedelta(minutes=30)
+
+        return intervals
+
+    # Calculate power usage for all 60-minute intervals starting at 30-minute marks
+    intervals = calculate_60min_intervals(df)
+
+    # Filter out intervals that overlap with peak hours
+    def overlaps_peak_hours(start, end):
+        for peak_time in peak_hours:
+            if start.time() <= peak_time < end.time() or start.time() < peak_time <= end.time():
+                return True
+        return False
+
+    filtered_intervals = [
+        (start, end, usage) for start, end, usage in intervals
+        if not overlaps_peak_hours(start, end)
     ]
 
-    # Assign time periods
-    for (start, end), period in time_periods:
-        if start < end:
-            df.loc[(df.index.hour >= start) & (
-                df.index.hour < end), 'time_period'] = period
-        else:
-            df.loc[(df.index.hour >= start) | (
-                df.index.hour < end), 'time_period'] = period
+    # Find the interval with the maximum usage
+    if filtered_intervals:
+        max_interval = max(filtered_intervals, key=lambda x: x[2])
+        max_usage_start, max_usage_end, max_usage_value = max_interval
 
-    # Filter out peak periods
-    df = df[df['time_period'] != 'peak']
+        # Format for the upstream
+        simple_start_time = max_usage_start.strftime("%I:%M %p")
+        simple_end_time = max_usage_end.strftime("%I:%M %p")
+        max_usage_value = round(max_usage_value, 2)
 
-    # Calculate cost
-    df['cost'] = df['state'] * df['time_period'].map(rates)
+        # Output the result
+        logging.info(
+            f"The 60-minute interval with the most power usage is from {max_usage_start} to {max_usage_end} NZDT")
+        logging.info(f"Power used during this interval: {max_usage_value} kWh")
+        logging.info(f"Formatted start time for API: {simple_start_time}")
 
-    # Ensure 'cost' is numeric
-    df['cost'] = pd.to_numeric(df['cost'], errors='coerce')
-
-    # Resample and calculate cost for each interval
-    cost_by_hour = df.resample('1h').sum()['cost']
-    cost_by_half_hour = df.resample('30min').sum()['cost']
-
-    # Find optimal time period
-    optimal_hour = cost_by_hour.idxmax()
-    optimal_half_hour = cost_by_half_hour.idxmax()
-
-    # Determine the optimal time period and total kWh
-    if cost_by_hour[optimal_hour] >= cost_by_half_hour[optimal_half_hour]:
-        optimal_time_period = optimal_hour
-        total_kwh = df[df.index.hour == optimal_hour.hour]['state'].sum()
+        # Return the formatted start time for further use if needed
+        return simple_start_time, simple_end_time, max_usage_value
     else:
-        optimal_time_period = optimal_half_hour
-        total_kwh = df[(df.index.hour == optimal_half_hour.hour) &
-                       (df.index.minute == optimal_half_hour.minute)]['state'].sum()
-
-    # Format optimal time period for logging
-    start_time = optimal_time_period.strftime("%I:%M %p")
-    end_time = (optimal_time_period +
-                pd.Timedelta(minutes=60)).strftime("%I:%M %p")
-
-    # Determine cost based on time period
-    if 9 <= optimal_time_period.hour < 17 or 21 <= optimal_time_period.hour < 23:
-        cost = total_kwh * rates['off_peak_shoulder']
-    else:
-        cost = total_kwh * rates['off_peak']
-
-    total_kwh = round(total_kwh, 2)
-    cost = round(cost, 2)
-
-    logging.info(f"Hour of Power: {start_time} - {end_time}")
-    logging.info(f"Total kWh: {total_kwh}")
-    logging.info(f"Estimated Savings: ${cost}")
-
-    return start_time, end_time, total_kwh, cost
+        logging.info("No valid intervals found.")
+        return None
