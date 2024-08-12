@@ -1,31 +1,24 @@
-provider "azurerm" {
-  features {}
-}
-
-locals {
-  names = {
-    azurerm_storage_account    = "sthopprdaue"
-    azurerm_resource_group     = "rg-hop-prd-aue"
-    azurerm_service_plan       = "func-hop-prd-aue"
-    azurerm_linux_function_app = "asp-hop-prd-aue"
-  }
-}
-
 resource "azurerm_resource_group" "main" {
-  name     = local.names.azurerm_resource_group
+  name     = var.resource_names.azurerm_resource_group
   location = "Australia East"
 }
 
 resource "azurerm_storage_account" "main" {
-  name                     = local.names.azurerm_storage_account
+  name                     = var.resource_names.azurerm_storage_account
   resource_group_name      = azurerm_resource_group.main.name
   location                 = azurerm_resource_group.main.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+
+  # Hardening
+  min_tls_version           = "1.2"
+  enable_https_traffic_only = true
+
+
 }
 
 resource "azurerm_service_plan" "main" {
-  name                = local.names.azurerm_service_plan
+  name                = var.resource_names.azurerm_service_plan
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   os_type             = "Linux"
@@ -33,7 +26,7 @@ resource "azurerm_service_plan" "main" {
 }
 
 resource "azurerm_linux_function_app" "main" {
-  name                = local.names.azurerm_linux_function_app
+  name                = var.resource_names.azurerm_linux_function_app
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
 
