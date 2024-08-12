@@ -6,9 +6,25 @@ This provides us with an opportunity to analyse the days KWh usage just before m
 
 We pull the usage data from Home Assistant, (*you can read my blog post about getting power consumption data into Home Assistant [here](https://blog.malleynet.xyz/posts/electrickiwi/part1/)*) And analyse it using the python library pandas, before setting the optimal Hour of Power and notify the user via [pushover](https://pushover.net/) 
 
+![](./docs/diagram.png)
+
 This repo also serves as a baseline DevSecFinOps template
 
-![](./docs/diagram.png)
+TODO: 
+
+**Python**
+- pytest
+- bandit
+
+**Terraform**
+- terraform test
+- infracost
+- Checkov
+
+**Github**
+- dependabot
+- CI & CD pipelines
+
 
 ## Development
 
@@ -41,18 +57,3 @@ This repo also serves as a baseline DevSecFinOps template
 2. Run `func start` to run your function
 
 ## Deployment
-
-TODO: 
-
-**Python**
-- pytest
-- bandit
-
-**Terraform**
-- terraform test
-- infracost
-- Checkov
-
-**Github**
-- dependabot
-- CI & CD pipelines
