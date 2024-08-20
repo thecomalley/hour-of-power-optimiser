@@ -8,24 +8,6 @@ We pull the usage data from Home Assistant, (*you can read my blog post about ge
 
 ![](./docs/diagram.png)
 
-This repo also serves as a baseline DevSecFinOps template
-
-TODO: 
-
-**Python**
-- pytest
-- bandit
-
-**Terraform**
-- terraform test
-- infracost
-- Checkov
-
-**Github**
-- dependabot
-- CI & CD pipelines
-
-
 ## Development
 
 ### Requirements
@@ -36,7 +18,7 @@ TODO:
 
 ### Steps
 1. Create a file called `src/local.settings.json`
-   1. This will contain your environment variables for development (when deployed these are sourced from an Azure KeyVault)
+   1. This will contain your environment variables for development
    ```json
     {
     "IsEncrypted": false,
@@ -55,5 +37,3 @@ TODO:
     }
    ```
 2. Run `func start` to run your function
-
-## Deployment
