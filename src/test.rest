@@ -1,0 +1,11 @@
+
+POST http://localhost:7071/api/hello
+content-type: application/json
+
+{}
+
+###
+POST http://localhost:7071/api/double?value=42
+content-type: application/json
+
+{}

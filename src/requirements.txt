@@ -1,0 +1,6 @@
+azure-functions
+requests
+pandas
+arrow
+pyaes
+matplotlib

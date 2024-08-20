@@ -1,0 +1,15 @@
+name: continuous-integration
+
+on: [pull_request]
+
+jobs:
+  bandit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bandit Scan
+        uses: shundor/python-bandit-scan@v1.0
+        with:
+          path: "."
+          level: high
+          confidence: high
+          exit_zero: true
