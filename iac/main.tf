@@ -1,38 +1,37 @@
-resource "azurerm_resource_group" "main" {
-  name     = var.resource_names.azurerm_resource_group
+data "azurerm_client_config" "current" {}
+
+module "terraform_azurerm_python_function" {
+  source  = "thecomalley/python-function/azurerm"
+  version = "1.2.0"
+
   location = "Australia East"
-}
 
-resource "azurerm_storage_account" "main" {
-  name                     = var.resource_names.azurerm_storage_account
-  resource_group_name      = azurerm_resource_group.main.name
-  location                 = azurerm_resource_group.main.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+  # { organization }-{ workload }-{ environment }-{ region }-{ component }-{ ResourceType }
+  resource_group_name       = "oma-hop-hprd-aue-rg"
+  function_app_name         = "oma-hop-hprd-aue-func"
+  storage_account_name      = "omahophprdauest"
+  log_analytics_name        = "oma-hop-hprd-aue-law"
+  app_service_plan_name     = "oma-hop-hprd-aue-asp"
+  application_insights_name = "oma-hop-hprd-aue-ai"
+  key_vault_name            = "oma-hop-hprd-aue-kv"
 
-  # Hardening
-  min_tls_version           = "1.2"
-  enable_https_traffic_only = true
+  python_version = "3.11"
 
+  # must be a relative path to ${path.module}
+  python_source_code_path = "../src"
 
-}
+  secret_environment_variables = [
+    "ELECTRIC_KIWI_EMAIL",
+    "ELECTRIC_KIWI_PASSWORD",
+    "HOME_ASSISTANT_ACCESS_TOKEN",
+    "HOME_ASSISTANT_ENTITY_ID",
+    "HOME_ASSISTANT_URL",
+    "PUSHOVER_API_TOKEN",
+    "PUSHOVER_USER_KEY"
+  ]
 
-resource "azurerm_service_plan" "main" {
-  name                = var.resource_names.azurerm_service_plan
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  os_type             = "Linux"
-  sku_name            = "Y1"
-}
-
-resource "azurerm_linux_function_app" "main" {
-  name                = var.resource_names.azurerm_linux_function_app
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-
-  storage_account_name       = azurerm_storage_account.main.name
-  storage_account_access_key = azurerm_storage_account.main.primary_access_key
-  service_plan_id            = azurerm_service_plan.main.id
-
-  site_config {}
+  tags = {
+    WorkloadName = "Hour of Power Optimiser"
+    Environment  = "Home Production"
+  }
 }

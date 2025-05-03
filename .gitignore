@@ -2,3 +2,10 @@
 
 *.drawio.bkp
 *.drawio.dtmp
+
+# Ignore all .env files
+.env
+
+# Ignore .rest and .http files
+*.rest
+*.http
